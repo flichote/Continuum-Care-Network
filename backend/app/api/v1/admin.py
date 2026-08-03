@@ -246,13 +246,11 @@ async def review_match(
         match.status = MatchStatus.TERMINATED.value
     elif payload.approve:
         match.status = MatchStatus.APPROVED.value
+    elif match.status == MatchStatus.PENDING_UNBIND.value:
+        # reject unbind -> binding remains active (approved)
+        match.status = MatchStatus.APPROVED.value
     else:
-        # reject returns to previous effective state
-        match.status = (
-            MatchStatus.TERMINATED.value
-            if match.status == MatchStatus.PENDING_UNBIND.value
-            else MatchStatus.REJECTED.value
-        )
+        match.status = MatchStatus.REJECTED.value
     match.reviewed_by = current_user.id
     match.reviewed_at = datetime.now(timezone.utc)
     match.review_note = payload.note

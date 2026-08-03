@@ -8,6 +8,7 @@ Production uses PostgreSQL via DATABASE_URL (see app/core/config.py).
 import asyncio
 import os
 import sys
+import time
 from pathlib import Path
 
 # ensure `app` package is importable regardless of CWD
@@ -38,8 +39,17 @@ def _prepare_db():
     asyncio.run(setup())
     yield
     asyncio.run(engine.dispose())
-    if TEST_DB_PATH.exists():
-        TEST_DB_PATH.unlink()
+    # Windows + aiosqlite: the file handle may still be held briefly after
+    # dispose (connections are closed from the TestClient's portal loop, not
+    # the main loop). Retry a few times instead of failing the whole run.
+    for attempt in range(5):
+        try:
+            TEST_DB_PATH.unlink(missing_ok=True)
+            break
+        except PermissionError:
+            if attempt == 4:
+                break  # leave the file behind; it is gitignored (*.db)
+            time.sleep(0.3)
 
 
 @pytest.fixture()
