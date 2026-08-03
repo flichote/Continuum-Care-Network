@@ -37,7 +37,7 @@
 
 ## 快速开始
 
-> 前置条件：Docker 与 Docker Compose 已安装。
+> 前置条件：Docker 与 Docker Compose 已安装（本地开发后端也可以直接用 Python 3.12，见下方「后端本地启动」）。
 
 ```bash
 # 1. 克隆仓库
@@ -47,15 +47,51 @@ cd Continuum-Care-Network
 # 2. 复制环境变量示例并填写
 cp .env.example .env
 
-# 3. 一键启动（web / backend / db）
-docker compose up -d
+# 3. 一键启动（db / backend；web 前端接入中）
+docker compose up -d --build
 
 # 4. 访问
-# 前端:      http://localhost:3000
+# 前端:      http://localhost:3000（接入中）
 # 后端 API:  http://localhost:8000/docs  (Swagger UI)
 ```
 
-> 注：`docker compose` 编排与 `.env.example` 将在 M4（上线准备）阶段落地，当前仓库处于 M0 规划阶段。
+### 后端本地启动（不依赖 Docker 时）
+
+```bash
+cd backend
+
+# 创建虚拟环境（要求 Python 3.12+）
+python -m venv .venv
+source .venv/Scripts/activate        # Windows (git-bash)；Linux/macOS: source .venv/bin/activate
+
+# 安装依赖
+pip install -r requirements-dev.txt
+
+# 方式 A：有 Docker —— 只起数据库
+cd .. && docker compose up -d db && cd backend
+
+# 方式 B：无 Docker —— 使用嵌入式 PostgreSQL（开发依赖 pgserver 提供）
+python scripts/start_embedded_pg.py   # 自动下载并启动本地 PostgreSQL 16（端口 55432）
+
+# 运行数据库迁移（production 环境必需；development 环境启动时也会自动建表）
+alembic upgrade head
+
+# 启动 API
+uvicorn app.main:app --reload --port 8000
+
+# 验证
+curl http://localhost:8000/healthz
+# 打开 http://localhost:8000/docs 查看自动生成的 API 文档
+```
+
+运行测试：
+
+```bash
+cd backend
+pytest            # 使用 SQLite 内存/文件数据库，无需 PostgreSQL
+```
+
+> 种子管理员（首次启动自动创建）：`13800000000` / `Admin123456`（可通过 .env 中 `SEED_ADMIN_*` 修改）。
 
 ## 目录结构
 
@@ -64,9 +100,20 @@ Continuum-Care-Network/
 ├── docs/
 │   ├── PRD.md          # 产品需求文档（角色/功能/权限矩阵）
 │   └── tech-stack.md   # 技术选型与决策记录
-├── web/                # 前端（Next.js，规划中）
-├── backend/            # 后端（FastAPI，规划中）
-├── .gitignore
+├── backend/            # 后端（FastAPI + PostgreSQL，已实现）
+│   ├── app/
+│   │   ├── main.py     # 应用入口（/docs、/healthz）
+│   │   ├── core/       # 配置、JWT/bcrypt 安全、RBAC 依赖
+│   │   ├── models/     # SQLAlchemy 2 async 模型
+│   │   ├── schemas/    # Pydantic v2 校验模型
+│   │   ├── api/v1/     # 认证/用户/患者/康复师/匹配/健康/计划/消息/告警/管理
+│   │   └── services/   # 告警阈值评估、审计日志
+│   ├── alembic/        # 数据库迁移（alembic upgrade head）
+│   ├── tests/          # pytest（auth + health 示例）
+│   └── scripts/        # 本地开发辅助脚本
+├── web/                # 前端（Next.js，接入中）
+├── docker-compose.yml  # db + backend 编排
+├── .env.example
 └── README.md
 ```
 

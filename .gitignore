@@ -49,3 +49,8 @@ temp/
 docker-data/
 postgres-data/
 pgdata/
+pgdata-embedded/
+
+# ---------- 本地测试/临时数据库 ----------
+*.db
+*.sqlite3

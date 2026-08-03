@@ -1,0 +1,44 @@
+# Continuum-Care-Network 本地开发编排
+# M0/M1 阶段：db + backend。web（前端）由后续任务接入。
+# 启动：docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ccn-db
+    environment:
+      POSTGRES_USER: ccn
+      POSTGRES_PASSWORD: ccn_password
+      POSTGRES_DB: continuum_care
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccn -d continuum_care"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: ccn-backend
+    environment:
+      # 容器内使用 db 主机名；本地直接跑 uvicorn 时用 localhost。
+      # .env 存在时 ${VAR} 会被替换，否则使用默认值。
+      DATABASE_URL: postgresql+asyncpg://ccn:ccn_password@db:5432/continuum_care
+      ENV: development
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
+      SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE:-13800000000}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123456}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # 容器启动时执行迁移（幂等），然后启动 API
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
