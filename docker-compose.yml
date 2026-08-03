@@ -1,33 +1,59 @@
-# Continuum-Care-Network 本地开发编排
-# M0/M1 阶段：db + backend。web（前端）由后续任务接入。
-# 启动：docker compose up -d --build
+# ============================================================
+# Continuum-Care-Network 生产编排（三服务）
+#   web      — Next.js 16（frontend/，standalone 产物）
+#   backend  — FastAPI（backend/，alembic 迁移 + uvicorn）
+#   db       — PostgreSQL 16（卷持久化）
+#
+# 用法：
+#   1) cp deploy/.env.example deploy/.env && 按需修改（生产必改密钥）
+#   2) docker compose --env-file deploy/.env up -d --build
+#   3) 健康检查：curl http://localhost:8000/healthz
+# 文档：docs/ops/deploy.md（初始化 / 升级 / 回滚）
+# ============================================================
+
+name: continuum-care-network
+
 services:
   db:
     image: postgres:16-alpine
     container_name: ccn-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ccn
-      POSTGRES_PASSWORD: ccn_password
-      POSTGRES_DB: continuum_care
+      POSTGRES_USER: ${POSTGRES_USER:-ccn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ccn_password}
+      POSTGRES_DB: ${POSTGRES_DB:-continuum_care}
+      # 容器内统一使用 UTC，避免时区导致的时间戳错乱
+      TZ: ${TZ:-UTC}
+      PGTZ: ${TZ:-UTC}
     ports:
+      # 生产可改为 127.0.0.1:${DB_PORT:-5432}:5432 避免数据库暴露公网
       - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ccn -d continuum_care"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ccn} -d ${POSTGRES_DB:-continuum_care}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
+    networks:
+      - ccn-net
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+    image: ccn-backend:${IMAGE_TAG:-latest}
     container_name: ccn-backend
+    restart: unless-stopped
     environment:
-      # 容器内使用 db 主机名；本地直接跑 uvicorn 时用 localhost。
-      # .env 存在时 ${VAR} 会被替换，否则使用默认值。
-      DATABASE_URL: postgresql+asyncpg://ccn:ccn_password@db:5432/continuum_care
-      ENV: development
+      # 容器内通过 db 服务名访问数据库（单点定义账号密码，与 db 服务一致）
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ccn}:${POSTGRES_PASSWORD:-ccn_password}@db:5432/${POSTGRES_DB:-continuum_care}
+      ENV: ${ENV:-production}
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE:-13800000000}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123456}
     ports:
@@ -35,10 +61,52 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # 容器启动时执行迁移（幂等），然后启动 API
+    # 启动时先执行幂等迁移，再启动 API（见 docs/ops/deploy.md 升级章节）
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ccn-net
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # 构建期内联到浏览器 JS；生产改为公网可访问的 API 地址
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    image: ccn-web:${IMAGE_TAG:-latest}
+    container_name: ccn-web
+    restart: unless-stopped
+    environment:
+      # standalone server.js 运行时仅需要端口/主机名
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ccn-net
 
 volumes:
   pgdata:
+    name: ccn-pgdata
+
+networks:
+  ccn-net:
+    name: ccn-net
+    driver: bridge

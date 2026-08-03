@@ -1,0 +1,30 @@
+# ---------- 依赖与构建产物 ----------
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------- 版本控制 / IDE ----------
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---------- 环境变量（不得进入镜像，构建参数注入） ----------
+.env
+.env.*
+!.env.example
+
+# ---------- 文档 / 本地调试 ----------
+*.md
+Dockerfile
+.dockerignore
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

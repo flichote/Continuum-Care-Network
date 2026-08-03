@@ -47,12 +47,12 @@ cd Continuum-Care-Network
 # 2. 复制环境变量示例并填写
 cp .env.example .env
 
-# 3. 一键启动（db / backend；web 前端见下方「前端本地启动」）
+# 3. 一键启动（web / backend / db 三服务）
 docker compose up -d --build
 
 # 4. 访问
+# 前端:      http://localhost:3000
 # 后端 API:  http://localhost:8000/docs  (Swagger UI)
-# 前端:      http://localhost:3000（见下方「前端本地启动」）
 ```
 
 ### 前端本地启动（Next.js 16）
@@ -141,7 +141,15 @@ Continuum-Care-Network/
 │   ├── types/         # 与后端 OpenAPI 对齐的 TS 类型
 │   ├── proxy.ts       # 路由守卫（未登录/角色限制，Next.js 16 proxy）
 │   └── .env.example   # NEXT_PUBLIC_API_URL
-├── docker-compose.yml  # db + backend 编排
+├── docker-compose.yml  # web + backend + db 三服务编排（健康检查/卷/环境变量）
+├── deploy/
+│   └── .env.example    # 生产环境变量模板
+├── docs/
+│   ├── ops/
+│   │   ├── deploy.md      # 部署手册（初始化/升级/回滚/备份）
+│   │   └── monitoring.md  # 监控方案（日志/健康检查/告警）
+│   ├── PRD.md
+│   └── tech-stack.md
 ├── .env.example
 └── README.md
 ```
