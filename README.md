@@ -47,13 +47,36 @@ cd Continuum-Care-Network
 # 2. 复制环境变量示例并填写
 cp .env.example .env
 
-# 3. 一键启动（db / backend；web 前端接入中）
+# 3. 一键启动（db / backend；web 前端见下方「前端本地启动」）
 docker compose up -d --build
 
 # 4. 访问
-# 前端:      http://localhost:3000（接入中）
 # 后端 API:  http://localhost:8000/docs  (Swagger UI)
+# 前端:      http://localhost:3000（见下方「前端本地启动」）
 ```
+
+### 前端本地启动（Next.js 16）
+
+```bash
+cd frontend
+
+# 安装依赖（要求 Node.js 20.9+ / 18.18+）
+npm install
+
+# 复制环境变量示例并填写（默认指向本机后端 http://localhost:8000/api/v1）
+cp .env.example .env.local
+
+# 开发模式
+npm run dev
+# 打开 http://localhost:3000
+
+# 生产构建验证（无后端也可执行）
+npm run build
+npm start
+```
+
+> 前端为纯客户端渲染（App Router + "use client"），构建不依赖后端服务；运行时需后端 API 提供数据（`NEXT_PUBLIC_API_URL` 指向 FastAPI 的 `/api/v1` 前缀）。
+> 种子管理员：`13800000000` / `Admin123456`（可通过 .env 中 `SEED_ADMIN_*` 修改）。
 
 ### 后端本地启动（不依赖 Docker 时）
 
@@ -111,7 +134,13 @@ Continuum-Care-Network/
 │   ├── alembic/        # 数据库迁移（alembic upgrade head）
 │   ├── tests/          # pytest（auth + health 示例）
 │   └── scripts/        # 本地开发辅助脚本
-├── web/                # 前端（Next.js，接入中）
+├── frontend/          # 前端（Next.js 16 App Router + TS + Tailwind，已实现）
+│   ├── app/           # 路由分组 (auth)/(patient)/(therapist)/(admin) + 全局页
+│   ├── components/    # ui（基础组件）/ layout / feature（业务组件）
+│   ├── lib/           # api 客户端（JWT 自动附加 + 401 刷新）、auth 上下文、常量
+│   ├── types/         # 与后端 OpenAPI 对齐的 TS 类型
+│   ├── proxy.ts       # 路由守卫（未登录/角色限制，Next.js 16 proxy）
+│   └── .env.example   # NEXT_PUBLIC_API_URL
 ├── docker-compose.yml  # db + backend 编排
 ├── .env.example
 └── README.md

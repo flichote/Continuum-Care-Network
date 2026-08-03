@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+/* ===== Continuum-Care-Network 设计系统 Token（docs/design/design-system.md）===== */
+@theme {
+  /* 品牌主色 Teal */
+  --color-primary-50: #effcf9;
+  --color-primary-100: #d6f5ec;
+  --color-primary-200: #b0e8da;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+
+  /* 强调色暖橙 */
+  --color-accent-100: #fff3e0;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;
+
+  /* 语义色 */
+  --color-success-100: #dcfce7;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  --color-info-100: #dbeafe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+
+  /* 中性色 Slate */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* 图表色板（design-system §2.5） */
+  --color-chart-1: #0d9488;
+  --color-chart-2: #f97316;
+  --color-chart-3: #3b82f6;
+  --color-chart-4: #8b5cf6;
+  --color-chart-5: #22c55e;
+
+  /* 圆角（design-system §5） */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* 阴影（design-system §6） */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08),
+    0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1),
+    0 4px 6px -4px rgba(15, 23, 42, 0.08);
+
+  /* 字体（design-system §3.1） */
+  --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans SC", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 细滚动条（聊天区等） */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 数字等宽（健康指标） */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
