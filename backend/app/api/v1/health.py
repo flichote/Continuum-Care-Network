@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import ensure_patient_access, get_current_user, require_roles
 from app.core.enums import HEALTH_METRICS, HEALTH_VALIDATION, Role
 from app.db import get_db
-from app.models import HealthRecord, User
+from app.models import HealthRecord, Match, User
 from app.schemas.api import (
     HealthRecordIn,
     HealthRecordOut,
@@ -93,11 +93,29 @@ async def list_health_records(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> HealthRecordPage:
-    """查询健康数据：患者本人 / 绑定康复师 / 管理员（F5.5）。"""
-    target = patient_id or current_user.id
-    await ensure_patient_access(db, target, current_user)
+    """查询健康数据：患者本人 / 绑定康复师（名下患者）/ 管理员（F5.5）。"""
+    if current_user.role == Role.PATIENT.value:
+        target_ids = [current_user.id]
+    elif current_user.role == Role.THERAPIST.value:
+        if patient_id is not None:
+            await ensure_patient_access(db, patient_id, current_user)
+            target_ids = [patient_id]
+        else:
+            match_q = select(Match.patient_id).where(
+                Match.therapist_id == current_user.id,
+                Match.status == "approved",
+            )
+            target_ids = [row[0] for row in (await db.execute(match_q)).all()]
+            if not target_ids:
+                return HealthRecordPage(total=0, page=page, size=size, items=[])
+    elif current_user.role == Role.ADMIN.value:
+        target_ids = [patient_id] if patient_id is not None else None  # None = all
+    else:
+        raise HTTPException(status_code=403, detail="无权限")
 
-    filters = [HealthRecord.patient_id == target]
+    filters = []
+    if target_ids is not None:
+        filters.append(HealthRecord.patient_id.in_(target_ids))
     if record_type:
         filters.append(HealthRecord.record_type == record_type)
     if from_time:
@@ -148,15 +166,44 @@ async def get_health_trends(
     """按日聚合趋势：avg/min/max/count（F5.3）。"""
     if record_type not in HEALTH_METRICS:
         raise HTTPException(status_code=422, detail="不支持的指标类型")
-    target = patient_id or current_user.id
-    await ensure_patient_access(db, target, current_user)
+    # resolve target patients: patient=self / therapist=specified or all bound / admin=all
+    if current_user.role == Role.PATIENT.value:
+        target_ids = [current_user.id]
+    elif current_user.role == Role.THERAPIST.value:
+        if patient_id is not None:
+            await ensure_patient_access(db, patient_id, current_user)
+            target_ids = [patient_id]
+        else:
+            match_q = select(Match.patient_id).where(
+                Match.therapist_id == current_user.id,
+                Match.status == "approved",
+            )
+            target_ids = [row[0] for row in (await db.execute(match_q)).all()]
+            if not target_ids:
+                _fields = (
+                    "systolic,diastolic"
+                    if record_type == "blood_pressure"
+                    else "value"
+                )
+                return TrendOut(
+                    record_type=record_type,
+                    field=_fields,
+                    unit=HEALTH_METRICS[record_type]["unit"],
+                    points=[],
+                )
+    elif current_user.role == Role.ADMIN.value:
+        target_ids = [patient_id] if patient_id is not None else None  # None = all
+    else:
+        raise HTTPException(status_code=403, detail="无权限")
 
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    stmt = select(HealthRecord).where(
-        HealthRecord.patient_id == target,
+    filters = [
         HealthRecord.record_type == record_type,
         HealthRecord.recorded_at >= since,
-    ).order_by(HealthRecord.recorded_at.asc())
+    ]
+    if target_ids is not None:
+        filters.append(HealthRecord.patient_id.in_(target_ids))
+    stmt = select(HealthRecord).where(*filters).order_by(HealthRecord.recorded_at.asc())
     records = (await db.execute(stmt)).scalars().all()
 
     # field to aggregate: value for single-value metrics, systolic/diastolic for BP

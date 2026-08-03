@@ -4,13 +4,13 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import ensure_patient_access, get_current_user, require_roles
+from app.core.deps import ensure_patient_access, get_current_user
 from app.core.enums import Role
 from app.db import get_db
-from app.models import Alert, User
+from app.models import Alert, Match, User
 from app.schemas.api import AlertHandleIn, AlertOut
 from app.services.audit import log_action
 
@@ -27,11 +27,30 @@ async def list_alerts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[Alert]:
-    """告警列表：患者本人 / 绑定康复师 / 管理员全局（F8.5）。"""
-    target = patient_id or current_user.id
-    await ensure_patient_access(db, target, current_user)
+    """告警列表：患者本人 / 绑定康复师（名下患者）/ 管理员全局（F8.5）。"""
+    if current_user.role == Role.PATIENT.value:
+        target_ids = [current_user.id]
+    elif current_user.role == Role.THERAPIST.value:
+        if patient_id is not None:
+            await ensure_patient_access(db, patient_id, current_user)
+            target_ids = [patient_id]
+        else:
+            # aggregate across all bound patients
+            match_q = select(Match.patient_id).where(
+                Match.therapist_id == current_user.id,
+                Match.status == "approved",
+            )
+            target_ids = [row[0] for row in (await db.execute(match_q)).all()]
+            if not target_ids:
+                return []
+    elif current_user.role == Role.ADMIN.value:
+        target_ids = [patient_id] if patient_id is not None else None  # None = all
+    else:
+        raise HTTPException(status_code=403, detail="无权限")
 
-    filters = [Alert.patient_id == target]
+    filters = []
+    if target_ids is not None:
+        filters.append(Alert.patient_id.in_(target_ids))
     if status_filter:
         filters.append(Alert.status == status_filter)
     if severity:
