@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     # --- App ---
-    PROJECT_NAME: str = "Continuum Care Network API"
+    PROJECT_NAME: str = "Continuum Care Network (CCN) API"
     API_V1_PREFIX: str = "/api/v1"
     ENV: str = "development"
 

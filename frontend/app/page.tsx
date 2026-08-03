@@ -20,7 +20,7 @@ export default function HomePage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-600 text-white">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
-        <span className="text-lg font-semibold text-primary-800">连续照护</span>
+        <span className="text-lg font-semibold text-primary-800">延续康护</span>
       </div>
       <p className="text-sm text-neutral-500">正在进入工作台…</p>
     </div>

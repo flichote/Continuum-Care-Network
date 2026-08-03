@@ -1,4 +1,4 @@
-# Continuum-Care-Network 产品需求文档（PRD）
+# 延续康护（Continuum Care Network, CCN）产品需求文档（PRD）
 
 - 版本：v0.1（初始规划）
 - 状态：草案

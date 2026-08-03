@@ -127,7 +127,7 @@ export function AppShell({
               <HeartPulse className="h-4.5 w-4.5" />
             </div>
             <span className="hidden text-base font-semibold text-primary-800 sm:block">
-              连续照护
+              延续康护
             </span>
           </div>
           <div className="ml-2 hidden h-5 w-px bg-neutral-200 sm:block" />
@@ -233,7 +233,7 @@ export function AppShell({
           })}
         </nav>
         <div className="border-t border-neutral-100 p-3 text-xs text-neutral-400">
-          {role === "patient" ? "患者端" : "康复师端"} · 连续照护网络
+          {role === "patient" ? "患者端" : "康复师端"} · 延续康护
         </div>
       </aside>
 

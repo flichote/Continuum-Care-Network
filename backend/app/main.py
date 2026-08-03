@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=__version__,
-    description="连续照护网络平台后端 API（FastAPI + PostgreSQL）",
+    description="延续康护平台后端 API（FastAPI + PostgreSQL）",
     lifespan=lifespan,
 )
 

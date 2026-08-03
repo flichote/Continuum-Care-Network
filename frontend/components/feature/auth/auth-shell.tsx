@@ -46,7 +46,7 @@ export function AuthShell({
             <HeartPulse className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xl font-semibold text-primary-800">连续照护</div>
+            <div className="text-xl font-semibold text-primary-800">延续康护</div>
             <div className="text-xs text-neutral-500">出院不离线，康复不中断</div>
           </div>
         </div>

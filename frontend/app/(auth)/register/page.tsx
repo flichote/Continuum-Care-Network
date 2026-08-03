@@ -77,7 +77,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="注册账号"
-      subtitle="加入连续照护网络，开始您的康复之旅"
+      subtitle="加入延续康护，开始您的康复之旅"
       footer={
         <>
           已有账号？{" "}

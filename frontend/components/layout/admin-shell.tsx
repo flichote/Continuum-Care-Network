@@ -66,7 +66,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-600 text-white">
               <HeartPulse className="h-4.5 w-4.5" />
             </div>
-            <span className="text-base font-semibold text-primary-800">连续照护</span>
+            <span className="text-base font-semibold text-primary-800">延续康护</span>
             <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500">
               管理端
             </span>
@@ -114,7 +114,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="border-t border-neutral-100 p-3 text-xs text-neutral-400">
-          管理端 · 连续照护网络
+          管理端 · 延续康护
         </div>
       </aside>
 
