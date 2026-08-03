@@ -1,10 +1,15 @@
-"""T5 live smoke test against a real uvicorn server (port 8010, SQLite)."""
+"""T5 live smoke test against a real uvicorn server (SQLite).
+
+Base URL defaults to http://localhost:8010/api/v1; override with SMOKE_BASE env.
+"""
 import json
+import os
 import random
 import sys
 import urllib.request
 
-BASE = "http://localhost:8010/api/v1"
+BASE = os.environ.get("SMOKE_BASE", "http://localhost:8010/api/v1")
+ROOT = BASE.rsplit("/api/v1", 1)[0]
 PASSWORD = "Passw0rd123"
 
 
@@ -38,10 +43,8 @@ def main():
         results.append((name, bool(cond), extra))
         print(("PASS" if cond else "FAIL"), name, extra)
 
-    # 1. healthz
-    s, b = req("GET", "/../healthz".replace("/../", "/") if False else "")
-    # healthz is at root, not under /api/v1
-    with urllib.request.urlopen("http://localhost:8010/healthz", timeout=5) as r:
+    # 1. healthz (root path, not under /api/v1)
+    with urllib.request.urlopen(f"{ROOT}/healthz", timeout=5) as r:
         hb = json.loads(r.read())
     check("SYS-001 healthz", hb.get("status") == "ok" and hb.get("database") == "up", str(hb))
 
